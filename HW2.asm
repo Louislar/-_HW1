@@ -45,11 +45,11 @@ input:
 	#, but we need m_i first
 	# store the $sp at $s1
 	move $s1, $sp
-	addu $t0, $s0,$s0 # loop k*2 times 
+	addu $t0, $s0,$zero # loop k times 
 s1_adjust:	# adjust $s1 to storing m_i's data's address (always)
 	addi $s1, $s1, 4
 	subi $t0, $t0, 1
-	bne $t0, 1, s1_adjust
+	bne $t0, 0, s1_adjust
 	
 	
 	#we need to multiply k m_i, to get m, and store it in $s2
@@ -86,9 +86,9 @@ count_Y_i: # $t0 cannot use
 adjust_i: # check i is positive, otherwise, add m_i to i, until i is positive
 	
 	#pop a_i from stack
-	subi $t4, $t0, 1 # $t4 stores the offset of the a_i
+	subi $t4, $t0, 2 # $t4 stores the offset of the a_i
 	mul $t4, $t4, 4
-	move $t5, $sp # $t5 stores the address of stack's top
+	move $t5, $s1 # $t5 stores the address of stack's top
 	add $t5, $t5, $t4
 	lw $t5, 0($t5) # $t5 stores the a_i
 	
@@ -124,7 +124,7 @@ adjust_i: # check i is positive, otherwise, add m_i to i, until i is positive
     syscall
     
     #print x
-    move $a0, $s2
+    lw $a0, x
     jal print_
     
     
@@ -148,6 +148,26 @@ gcd:
 	# $t0=c, $t1=d(always)
 	# $t2=q, $t3=r, $t4=t , $t5=i_, $t6=j_, $t7=i, $t8=j (will be change in each loop)
 	
+	#push all the t0~t8
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+	addi $sp, $sp, -4
+	sw $t1, 0($sp)
+	addi $sp, $sp, -4
+	sw $t2, 0($sp)
+	addi $sp, $sp, -4
+	sw $t3, 0($sp)
+	addi $sp, $sp, -4
+	sw $t4, 0($sp)
+	addi $sp, $sp, -4
+	sw $t5, 0($sp)
+	addi $sp, $sp, -4
+	sw $t6, 0($sp)
+	addi $sp, $sp, -4
+	sw $t7, 0($sp)
+	addi $sp, $sp, -4
+	sw $t8, 0($sp)
+	
 	move $t0, $a0 # first c is A
 	move $t1, $a1 # first d is B
 	li $t5, 1 #i_=1
@@ -169,20 +189,40 @@ loop_gcd:
 	move $t4, $t5 #t=i_
 	move $t5, $t7 #i_=i
 	#i=t-q*i
-	mulu $t7, $t2, $t7 # i=q*i
-	subu $t7, $t4, $t7 #i=t-i
+	mul $t7, $t2, $t7 # i=q*i
+	sub $t7, $t4, $t7 #i=t-i
 	#calculate j
 	move $t4, $t6 #t=j_
 	move $t6, $t8 #j_=j
 	#j=t-q*j
-	mulu $t8, $t2, $t8 #j=q*j
-	subu $t8, $t4, $t8 #j=t-j
+	mul $t8, $t2, $t8 #j=q*j
+	sub $t8, $t4, $t8 #j=t-j
 	
 	j loop_gcd
 	
 gcd_end:
 	move $v0, $t7 #save i at v0
 	move $v1, $t8 #save j at v1
+	
+	#pop all the t0~t8
+	lw $t8, 0($sp)
+	addi $sp, $sp, 4
+	lw $t7, 0($sp)
+	addi $sp, $sp, 4
+	lw $t6, 0($sp)
+	addi $sp, $sp, 4
+	lw $t5, 0($sp)
+	addi $sp, $sp, 4
+	lw $t4, 0($sp)
+	addi $sp, $sp, 4
+	lw $t3, 0($sp)
+	addi $sp, $sp, 4
+	lw $t2, 0($sp)
+	addi $sp, $sp, 4
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
 	jr $ra
 	
 	
