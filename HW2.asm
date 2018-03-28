@@ -86,7 +86,7 @@ count_Y_i: # $t0 cannot use
 adjust_i: # check i is positive, otherwise, add m_i to i, until i is positive
 	
 	#pop a_i from stack
-	subi $t4, $t0, 2 # $t4 stores the offset of the a_i
+	subi $t4, $t0, 1 # $t4 stores the offset of the a_i
 	mul $t4, $t4, 4
 	move $t5, $s1 # $t5 stores the address of stack's top
 	add $t5, $t5, $t4
