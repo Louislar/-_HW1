@@ -4,6 +4,7 @@
      text:  .asciiz "\nInput: \n"
   turn: .word 0
   k: .word 0
+  x: .word 0
 
 
 .text
@@ -37,7 +38,7 @@ input:
     sw $v0, 0($sp)
     
     
-    subi $t0, 1  # loop 2*k times
+    subi $t0, $t0, 1  # loop 2*k times
     bne $t0, 0, input
 	
 	#we input k a_i first, then input k m_i
@@ -46,46 +47,65 @@ input:
 	move $s1, $sp
 	addu $t0, $s0,$s0 # loop k*2 times 
 s1_adjust:	# adjust $s1 to storing m_i's data's address (always)
-	addi $s1, 4
-	subi $t0, 1
-	bne $t0, 0, s1_adjust
+	addi $s1, $s1, 4
+	subi $t0, $t0, 1
+	bne $t0, 1, s1_adjust
 	
 	
 	#we need to multiply k m_i, to get m, and store it in $s2
 	move $t0, $s0 # loop k times
-	move $t1, $s1 # store m_i's data's address (temp)
-	li $s2, 0 # store m at $s2 (always)
+	move $t1, $sp # store m_i's data's address (temp)
+	li $s2, 1 # store m at $s2 (always)
 cal_m:
 	lw $t2, 0($t1) # load m_i to $t2
 	mul $s2, $s2, $t2 # mlutiply s2 by t2, then store the result in s2
-	addi $t1, -4
-	subi $t0, 1
+	addi $t1, $t1, 4
+	subi $t0, $t0, 1
 	bne $t0, 0, cal_m
 	
 	
 
 	#we ned to count k Y_i, so loop k times
+	# At the same time, we add all a_i*M_i*Y_i to x
 	move $t0, $s0
 	move $t1, $s1 # store m_i's data's address (temp)
 count_Y_i: # $t0 cannot use
-	addi $t1, -4 # make $t1 point to m_i
+	addi $t1, $t1, -4 # make $t1 point to m_i
 	lw $t2, 0($t1) # load m_i to $t2 (temp)
 	
 	#calulate M_i
 	div $s2, $t2 # m/m_i
 	mflo $t3 # $t3 stores M_i
 	
-    li $a0, $t3 # $a0 is M_i
-    li $a1, 5 # $a1 is m_i
+    move $a0, $t3 # $a0 is M_i
+    move $a1, $t2 # $a1 is m_i
     jal gcd # i will store in $v0, and j will store in $v1
     		# 1 = i*M_i + j*m_i
+    		# so, $v0 stores Y_i
     
+adjust_i: # check i is positive, otherwise, add m_i to i, until i is positive
+	
+	#pop a_i from stack
+	subi $t4, $t0, 1 # $t4 stores the offset of the a_i
+	mul $t4, $t4, 4
+	move $t5, $sp # $t5 stores the address of stack's top
+	add $t5, $t5, $t4
+	lw $t5, 0($t5) # $t5 stores the a_i
+	
+	
+    #add a_i*M_i*Y_i to x
+    mul $t6, $t5, $t3 # a_i*M_i
+    mul $t6, $t6, $v0 # (a_i*M_i) *Y_i
+    # save x to memory
+    lw $t7, x
+    add $t7, $t7, $t6
+    sw $t7, x 
     
     #print i
-    move $s1, $v0 #$s1=i
-    move $s2, $v1 #$s2=j
+    move $t8, $v0 #$s1=i
+    move $t9, $v1 #$s2=j
     li $v0, 1
-    move $a0, $s1
+    move $a0, $t8
     syscall
     
     # Printing out the \n
@@ -95,12 +115,20 @@ count_Y_i: # $t0 cannot use
     
     #print j
     li $v0, 1
-    move $a0, $s2
+    move $a0, $t9
     syscall
     
-    #push
+    # Printing out the \n
+    li $v0, 4
+    la $a0, change_line
+    syscall
     
-    subi $t0, 1
+    #print x
+    move $a0, $s2
+    jal print_
+    
+    
+    subi $t0, $t0, 1
     bne $t0, 0, count_Y_i
     
     
@@ -160,7 +188,10 @@ gcd_end:
 	
 	
 	
-	
+print_: # integer put in $a0
+	li $v0, 1
+    syscall
+    jr $ra
     
     
     
